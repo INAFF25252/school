@@ -49,7 +49,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/app/components/table";
-import { Code, Strong, Text, TextLink } from "@/app/components/text";
+import { Strong, Text, TextLink } from "@/app/components/text";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
 import type { ChangeEvent, ComponentProps, FormEvent } from "react";
@@ -489,7 +489,7 @@ export default function StudentsPage() {
         <div className="mx-auto w-full max-w-5xl space-y-8 pb-2 [--gutter:--spacing(6)]">
           <section
             aria-labelledby="student-filters-heading"
-            className="rounded-2xl border border-zinc-950/10 bg-zinc-50/90 p-5 shadow-xs sm:p-6 dark:border-white/10 dark:bg-zinc-950/40 dark:shadow-none"
+            className="rounded-2xl border border-zinc-950/10 bg-zinc-50/90 p-6 shadow-xs sm:p-8 dark:border-white/10 dark:bg-zinc-950/40 dark:shadow-none"
           >
             <h2 id="student-filters-heading" className="sr-only">
               Filters
@@ -499,9 +499,8 @@ export default function StudentsPage() {
               <FieldGroup className="!mt-0 !space-y-4">
                 <div className="grid gap-4 sm:grid-cols-2 sm:items-end sm:gap-6">
                   <Field>
-                    <Label htmlFor="student-search">Name</Label>
+                    <Label>Name</Label>
                     <Input
-                      id="student-search"
                       type="search"
                       name="student-search"
                       placeholder="Search…"
@@ -511,9 +510,8 @@ export default function StudentsPage() {
                     />
                   </Field>
                   <Field>
-                    <Label htmlFor="grade-filter">Grade</Label>
+                    <Label>Grade</Label>
                     <Select
-                      id="grade-filter"
                       name="grade-filter"
                       value={gradeFilter}
                       onChange={(e: ChangeEvent<HTMLSelectElement>) => setGradeFilter(e.target.value)}
@@ -551,7 +549,7 @@ export default function StudentsPage() {
             )}
           >
             <div
-              className="flex min-h-[3.25rem] flex-col gap-3 border-b border-zinc-950/10 px-5 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-6 dark:border-white/10"
+              className="flex min-h-[3.25rem] flex-col gap-3 border-b border-zinc-950/10 px-6 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-8 dark:border-white/10"
               role="status"
               aria-live="polite"
             >
@@ -596,7 +594,7 @@ export default function StudentsPage() {
               <div className="h-1 w-full bg-transparent" aria-hidden="true" />
             )}
 
-            <div className="px-0 pb-0 pt-0">
+            <div className="px-4 pb-0 pt-0 sm:px-6">
               {totalCount === 0 && !loading && !searchPending && !isFetching ? (
                 <div className="border-t border-dashed border-zinc-950/15 bg-zinc-50/50 px-6 py-14 text-center dark:border-white/10 dark:bg-zinc-950/30 sm:px-8">
                   <Text className="text-balance">No students match these filters.</Text>
@@ -621,7 +619,7 @@ export default function StudentsPage() {
                 <div className="relative min-h-[26rem]">
                   {isFetching && students.length > 0 ? (
                     <div
-                      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-white/90 px-4 backdrop-blur-sm dark:bg-zinc-900/90"
+                      className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-white/90 px-6 backdrop-blur-sm dark:bg-zinc-900/90"
                       aria-busy="true"
                       aria-label="Loading results"
                     >
@@ -632,11 +630,10 @@ export default function StudentsPage() {
                       </div>
                     </div>
                   ) : null}
-                  <Table striped bleed className="[--gutter:--spacing(5)] sm:[--gutter:--spacing(6)]">
+                  <Table striped className="[--gutter:--spacing(5)] sm:[--gutter:--spacing(6)]">
                     <TableHead>
                       <TableRow>
                         <TableHeader>Student</TableHeader>
-                        <TableHeader className="hidden sm:table-cell">Record</TableHeader>
                         <TableHeader className="text-right">Grade</TableHeader>
                         <TableHeader className="w-0 text-right">Actions</TableHeader>
                       </TableRow>
@@ -665,9 +662,6 @@ export default function StudentsPage() {
                                     </TextLink>
                                   </div>
                                 </div>
-                              </TableCell>
-                              <TableCell className="hidden sm:table-cell">
-                                <Code>#{student.id}</Code>
                               </TableCell>
                               <TableCell className="text-right">
                                 <Badge color={gradeBadgeColor(student.grade)}>Grade {student.grade}</Badge>
@@ -706,9 +700,6 @@ export default function StudentsPage() {
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="hidden sm:table-cell">
-                                <div className="h-4 w-14 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-                              </TableCell>
                               <TableCell className="text-right">
                                 <div className="ml-auto h-6 w-16 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
                               </TableCell>
@@ -724,9 +715,6 @@ export default function StudentsPage() {
                         return (
                           <TableRow key={`pad-${slot}`} aria-hidden className="pointer-events-none">
                             <TableCell>
-                              <div className="min-h-[3.25rem]" />
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell">
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
                             <TableCell className="text-right">
@@ -745,99 +733,113 @@ export default function StudentsPage() {
             </div>
 
             {totalCount > 0 ? (
-              <div className="border-t border-zinc-950/10 px-4 py-4 dark:border-white/10 sm:px-6">
-                <Pagination
-                  aria-label="Student list pagination"
-                  className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between"
-                >
-                  <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
-                    <Button
-                      plain
-                      aria-label="First page"
-                      disabled={displayedPage <= 1 || isFetching}
-                      onClick={() => setPage(1)}
+              <div className="border-t border-zinc-950/10 px-5 py-4 dark:border-white/10 sm:px-8">
+                {pageCount > 1 ? (
+                  <>
+                    <Pagination
+                      aria-label="Student list pagination"
+                      className="flex flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      First
-                    </Button>
-                    <Button
-                      plain
-                      aria-label="Previous page"
-                      disabled={displayedPage <= 1 || isFetching}
-                      onClick={() => setPage((p) => Math.max(1, p - 1))}
-                    >
-                      <svg className="stroke-current" data-slot="icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path
-                          d="M2.75 8H13.25M2.75 8L5.25 5.5M2.75 8L5.25 10.5"
-                          strokeWidth={1.5}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                      Previous
-                    </Button>
-                  </div>
-
-                  <PaginationList className="!flex flex-wrap items-center justify-center gap-1">
-                    {pageListItems.map((item, idx) =>
-                      item === "…" ? (
-                        <PaginationGap key={`gap-${idx}`} />
-                      ) : (
+                      <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-start">
                         <Button
-                          key={item}
                           plain
-                          aria-label={`Page ${item}`}
-                          aria-current={item === displayedPage ? "page" : undefined}
-                          disabled={isFetching}
-                          onClick={() => {
-                            if (item !== displayedPage) setPage(item);
-                          }}
-                          className={clsx(
-                            "min-w-9 before:absolute before:-inset-px before:rounded-lg",
-                            item === displayedPage && "before:bg-zinc-950/5 dark:before:bg-white/10"
-                          )}
+                          aria-label="First page"
+                          disabled={displayedPage <= 1 || isFetching}
+                          onClick={() => setPage(1)}
                         >
-                          <span className="-mx-0.5">{item}</span>
+                          First
                         </Button>
-                      )
-                    )}
-                  </PaginationList>
+                        <Button
+                          plain
+                          aria-label="Previous page"
+                          disabled={displayedPage <= 1 || isFetching}
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                          <svg
+                            className="stroke-current"
+                            data-slot="icon"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M2.75 8H13.25M2.75 8L5.25 5.5M2.75 8L5.25 10.5"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                          Previous
+                        </Button>
+                      </div>
 
-                  <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
-                    <Button
-                      plain
-                      aria-label="Next page"
-                      disabled={displayedPage >= pageCount || isFetching}
-                      onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                    >
-                      Next
-                      <svg className="stroke-current" data-slot="icon" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-                        <path
-                          d="M13.25 8L2.75 8M13.25 8L10.75 10.5M13.25 8L10.75 5.5"
-                          strokeWidth={1.5}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </Button>
-                    <Button
-                      plain
-                      aria-label="Last page"
-                      disabled={displayedPage >= pageCount || isFetching}
-                      onClick={() => setPage(pageCount)}
-                    >
-                      Last
-                    </Button>
-                  </div>
-                </Pagination>
-                <Text className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">
-                  Page <Strong>{displayedPage}</Strong> of <Strong>{pageCount}</Strong>
-                  {pageCount > 1 ? (
-                    <>
-                      {" "}
-                      · {PAGE_SIZE} rows per page
-                    </>
-                  ) : null}
-                </Text>
+                      <PaginationList className="!flex flex-wrap items-center justify-center gap-1">
+                        {pageListItems.map((item, idx) =>
+                          item === "…" ? (
+                            <PaginationGap key={`gap-${idx}`} />
+                          ) : (
+                            <Button
+                              key={item}
+                              plain
+                              aria-label={`Page ${item}`}
+                              aria-current={item === displayedPage ? "page" : undefined}
+                              disabled={isFetching}
+                              onClick={() => {
+                                if (item !== displayedPage) setPage(item);
+                              }}
+                              className={clsx(
+                                "min-w-9 before:absolute before:-inset-px before:rounded-lg",
+                                item === displayedPage && "before:bg-zinc-950/5 dark:before:bg-white/10"
+                              )}
+                            >
+                              <span className="-mx-0.5">{item}</span>
+                            </Button>
+                          )
+                        )}
+                      </PaginationList>
+
+                      <div className="flex flex-wrap items-center justify-center gap-2 sm:justify-end">
+                        <Button
+                          plain
+                          aria-label="Next page"
+                          disabled={displayedPage >= pageCount || isFetching}
+                          onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                        >
+                          Next
+                          <svg
+                            className="stroke-current"
+                            data-slot="icon"
+                            viewBox="0 0 16 16"
+                            fill="none"
+                            aria-hidden="true"
+                          >
+                            <path
+                              d="M13.25 8L2.75 8M13.25 8L10.75 10.5M13.25 8L10.75 5.5"
+                              strokeWidth={1.5}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </Button>
+                        <Button
+                          plain
+                          aria-label="Last page"
+                          disabled={displayedPage >= pageCount || isFetching}
+                          onClick={() => setPage(pageCount)}
+                        >
+                          Last
+                        </Button>
+                      </div>
+                    </Pagination>
+                    <Text className="mt-3 text-center text-xs text-zinc-500 dark:text-zinc-400">
+                      Page <Strong>{displayedPage}</Strong> of <Strong>{pageCount}</Strong> · {PAGE_SIZE} rows per page
+                    </Text>
+                  </>
+                ) : (
+                  <Text className="text-center text-xs text-zinc-500 dark:text-zinc-400">
+                    Showing all <Strong>{totalCount}</Strong> match{totalCount === 1 ? "" : "es"}.
+                  </Text>
+                )}
               </div>
             ) : null}
           </section>
@@ -864,9 +866,8 @@ export default function StudentsPage() {
             <Fieldset>
               <FieldGroup className="!space-y-5">
                 <Field>
-                  <Label htmlFor="student-form-name">Name</Label>
+                  <Label>Name</Label>
                   <Input
-                    id="student-form-name"
                     name="name"
                     type="text"
                     autoComplete="name"
@@ -883,9 +884,8 @@ export default function StudentsPage() {
                   {formErrors.name ? <ErrorMessage>{formErrors.name}</ErrorMessage> : null}
                 </Field>
                 <Field>
-                  <Label htmlFor="student-form-grade">Grade</Label>
+                  <Label>Grade</Label>
                   <Select
-                    id="student-form-grade"
                     name="grade"
                     value={formValues.grade}
                     onChange={(e: ChangeEvent<HTMLSelectElement>) =>
@@ -942,7 +942,7 @@ export default function StudentsPage() {
               <ul className="mt-2 list-disc space-y-2 pl-5 text-sm/6 text-amber-950/95 dark:text-amber-50/95">
                 <li>
                   <Strong className="text-amber-950 dark:text-amber-50">{deleteTarget.name}</Strong> disappears from the
-                  roster (student #{deleteTarget.id}).
+                  roster.
                 </li>
                 <li>
                   {deleteImpact.enrollmentCount === 0 ? (

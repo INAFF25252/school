@@ -1,12 +1,18 @@
 import { faker } from "@faker-js/faker";
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "../database.types";
+import { enrollmentGradesCompatible } from "../lib/enrollment-grade-rules";
+
+type StudentRow = Database["public"]["Tables"]["students"]["Row"];
 
 /**
- * One enrollment per student (each student in a single class).
- * Each class roster has distinct students (one row per student).
- * (student, class) pairs are all unique.
+ * One enrollment per student (each student in at most one class).
+ * Grade rules (enforced in DB): see `enrollmentGradesCompatible`.
  */
+function canAddToClass(existingGrades: Set<number>, grade: number): boolean {
+  return enrollmentGradesCompatible(existingGrades, grade);
+}
+
 async function main() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key =
@@ -24,7 +30,7 @@ async function main() {
 
   const [{ data: students, error: studentsError }, { data: classes, error: classesError }] =
     await Promise.all([
-      supabase.from("students").select("id"),
+      supabase.from("students").select("id, grade"),
       supabase.from("classes").select("id"),
     ]);
 
@@ -33,10 +39,10 @@ async function main() {
     process.exit(1);
   }
 
-  const studentIds = students?.map((s) => s.id) ?? [];
+  const studentRows = (students ?? []) as StudentRow[];
   const classIds = classes?.map((c) => c.id) ?? [];
 
-  if (studentIds.length === 0 || classIds.length === 0) {
+  if (studentRows.length === 0 || classIds.length === 0) {
     console.error("Need at least one student and one class to seed enrollments.");
     process.exit(1);
   }
@@ -51,19 +57,47 @@ async function main() {
     process.exit(1);
   }
 
-  const shuffledStudents = faker.helpers.shuffle(studentIds);
-  const shuffledClasses = faker.helpers.shuffle(classIds);
+  const shuffledClasses = faker.helpers.shuffle([...classIds]);
+  const shuffledStudents = faker.helpers.shuffle([...studentRows]);
 
-  const rows: Database["public"]["Tables"]["enrollments"]["Insert"][] =
-    shuffledStudents.map((student, i) => ({
-      student,
-      class: shuffledClasses[i % shuffledClasses.length]!,
-    }));
+  const classGrades = new Map<number, Set<number>>();
+  for (const c of shuffledClasses) {
+    classGrades.set(c, new Set());
+  }
 
-  const { data, error: insertError } = await supabase
-    .from("enrollments")
-    .insert(rows)
-    .select("id");
+  const assignedStudents = new Set<number>();
+  const rows: Database["public"]["Tables"]["enrollments"]["Insert"][] = [];
+
+  let progress = true;
+  while (progress) {
+    progress = false;
+    for (const classId of shuffledClasses) {
+      const existing = classGrades.get(classId)!;
+      const next = shuffledStudents.find(
+        (s) => !assignedStudents.has(s.id) && canAddToClass(existing, s.grade),
+      );
+      if (next) {
+        rows.push({ student: next.id, class: classId });
+        assignedStudents.add(next.id);
+        existing.add(next.grade);
+        progress = true;
+      }
+    }
+  }
+
+  const unassigned = studentRows.filter((s) => !assignedStudents.has(s.id));
+  if (unassigned.length > 0) {
+    console.warn(
+      `Could not place ${unassigned.length} student(s) under grade rules with current classes (try more classes or fewer students).`,
+    );
+  }
+
+  if (rows.length === 0) {
+    console.error("No valid enrollments to insert.");
+    process.exit(1);
+  }
+
+  const { data, error: insertError } = await supabase.from("enrollments").insert(rows).select("id");
 
   if (insertError) {
     console.error(insertError);
@@ -76,7 +110,7 @@ async function main() {
   }
 
   console.log(
-    `Removed ${deletedCount ?? "?"} prior enrollments; inserted ${data?.length ?? 0} rows (one unique class per student, unique students per class).`,
+    `Removed ${deletedCount ?? "?"} prior enrollments; inserted ${data?.length ?? 0} rows (grade rules: one grade per class, or 11–12 mixed).`,
   );
 }
 
