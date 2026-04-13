@@ -21,6 +21,7 @@ import {
 import { ErrorMessage, Field, FieldGroup, Fieldset, Label, Legend } from "@/app/components/fieldset";
 import { Subheading } from "@/app/components/heading";
 import { Input } from "@/app/components/input";
+import { ClassesIcon, HomeIcon, StudentsIcon, TeachersIcon } from "@/app/components/main-nav-icons";
 import {
   Navbar,
   NavbarDivider,
@@ -91,39 +92,6 @@ function validateTeacherForm(values: FormValues): FieldErrors {
     errors.email = "Enter a valid email or leave this blank.";
   }
   return errors;
-}
-
-function HomeIcon() {
-  return (
-    <svg data-slot="icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 16 11h-1v6a1 1 0 0 1-1 1h-3a1 1 0 0 1-1-1v-3H9v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" />
-    </svg>
-  );
-}
-
-function StudentsIcon() {
-  return (
-    <svg data-slot="icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM7.5 10A3.5 3.5 0 0 0 4 13.5V15a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1v-1.5A3.5 3.5 0 0 0 10.5 10h-3Z" />
-      <path d="M16.5 10.5c0 .78-.45 1.45-1.1 1.78.26.35.4.78.4 1.22V15a.5.5 0 0 1-.5.5h-1a.5.5 0 0 1-.5-.5v-1.5c0-.44-.14-.87-.4-1.22.65-.33 1.1-1 1.1-1.78 0-1.1-.9-2-2-2h-.05a4 4 0 0 0-1.2.18c.08.3.12.62.12.95v.12c.35.09.68.24.98.45h.15c.83 0 1.5.67 1.5 1.5Z" />
-    </svg>
-  );
-}
-
-function TeachersIcon() {
-  return (
-    <svg data-slot="icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-7 3.5V15a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-1.5A3.5 3.5 0 0 0 12.5 10h-5A3.5 3.5 0 0 0 3 13.5Z" />
-    </svg>
-  );
-}
-
-function ClassesIcon() {
-  return (
-    <svg data-slot="icon" viewBox="0 0 20 20" aria-hidden="true">
-      <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25h10.5c.69 0 1.25.56 1.25 1.25v8.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-8.5ZM5 7.5h10M5 10h6" />
-    </svg>
-  );
 }
 
 function initialsFromName(name: string) {

@@ -7,7 +7,7 @@ type StudentRow = Database["public"]["Tables"]["students"]["Row"];
 
 /**
  * One enrollment per student (each student in at most one class).
- * Grade rules (enforced in DB): see `enrollmentGradesCompatible`.
+ * Grade rules (enforced in DB): grades 1–10 = single grade per class; 11–12 may mix.
  */
 function canAddToClass(existingGrades: Set<number>, grade: number): boolean {
   return enrollmentGradesCompatible(existingGrades, grade);
@@ -110,7 +110,7 @@ async function main() {
   }
 
   console.log(
-    `Removed ${deletedCount ?? "?"} prior enrollments; inserted ${data?.length ?? 0} rows (grade rules: one grade per class, or 11–12 mixed).`,
+    `Removed ${deletedCount ?? "?"} prior enrollments; inserted ${data?.length ?? 0} rows (grades 1–10: one grade per class; 11–12 may mix).`,
   );
 }
 
