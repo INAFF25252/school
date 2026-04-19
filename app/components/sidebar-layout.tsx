@@ -2,7 +2,9 @@
 
 import * as Headless from '@headlessui/react'
 import React, { useState } from 'react'
+import { AuthUserMenu } from './auth-user-menu'
 import { NavbarItem } from './navbar'
+import { SidebarFooter } from './sidebar'
 
 function OpenMenuIcon() {
   return (
@@ -31,13 +33,13 @@ function MobileSidebar({ open, close, children }: React.PropsWithChildren<{ open
         transition
         className="fixed inset-y-0 w-full max-w-80 p-2 transition duration-300 ease-in-out data-closed:-translate-x-full"
       >
-        <div className="flex h-full flex-col rounded-lg bg-white shadow-xs ring-1 ring-zinc-950/5 dark:bg-zinc-900 dark:ring-white/10">
-          <div className="-mb-3 px-4 pt-3">
+        <div className="flex h-full min-h-0 flex-col rounded-lg bg-white shadow-xs ring-1 ring-zinc-950/5 dark:bg-zinc-900 dark:ring-white/10">
+          <div className="shrink-0 -mb-3 px-4 pt-3">
             <Headless.CloseButton as={NavbarItem} aria-label="Close navigation">
               <CloseMenuIcon />
             </Headless.CloseButton>
           </div>
-          {children}
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{children}</div>
         </div>
       </Headless.DialogPanel>
     </Headless.Dialog>
@@ -54,7 +56,12 @@ export function SidebarLayout({
   return (
     <div className="relative isolate flex min-h-svh w-full bg-white max-lg:flex-col lg:bg-zinc-100 dark:bg-zinc-900 dark:lg:bg-zinc-950">
       {/* Sidebar on desktop */}
-      <div className="fixed inset-y-0 left-0 w-64 max-lg:hidden">{sidebar}</div>
+      <div className="fixed inset-y-0 left-0 hidden w-64 lg:flex lg:flex-col">
+        <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">{sidebar}</div>
+        <SidebarFooter className="shrink-0 bg-white dark:bg-zinc-900">
+          <AuthUserMenu variant="sidebar" />
+        </SidebarFooter>
+      </div>
 
       {/* Sidebar on mobile */}
       <MobileSidebar open={showSidebar} close={() => setShowSidebar(false)}>
@@ -62,13 +69,16 @@ export function SidebarLayout({
       </MobileSidebar>
 
       {/* Navbar on mobile */}
-      <header className="flex items-center px-5 sm:px-7 lg:hidden">
-        <div className="py-2.5">
+      <header className="flex items-center gap-2 border-b border-zinc-950/5 bg-white px-5 sm:px-7 dark:border-white/10 dark:bg-zinc-900 lg:hidden">
+        <div className="shrink-0 py-2.5">
           <NavbarItem onClick={() => setShowSidebar(true)} aria-label="Open navigation">
             <OpenMenuIcon />
           </NavbarItem>
         </div>
         <div className="min-w-0 flex-1">{navbar}</div>
+        <div className="min-w-0">
+          <AuthUserMenu variant="toolbar" />
+        </div>
       </header>
 
       {/* Content */}

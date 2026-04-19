@@ -465,44 +465,12 @@ export default function TeachersPage() {
   return (
     <>
       <SidebarLayout navbar={navbar} sidebar={sidebar}>
-        <div className="mx-auto w-full max-w-5xl space-y-8 pb-2 [--gutter:--spacing(6)]">
-          <section
-            aria-labelledby="teacher-filters-heading"
-            className="rounded-2xl border border-zinc-950/10 bg-zinc-50/90 p-6 shadow-xs sm:p-8 dark:border-white/10 dark:bg-zinc-950/40 dark:shadow-none"
-          >
-            <h2 id="teacher-filters-heading" className="sr-only">
-              Filters
-            </h2>
-            <Fieldset className="border-0 p-0">
-              <Legend className="sr-only">Find teachers</Legend>
-              <FieldGroup className="!mt-0 !space-y-4">
-                <div className="grid gap-4 sm:grid-cols-2 sm:items-end sm:gap-6">
-                  <Field>
-                    <Label>Name</Label>
-                    <Input
-                      type="search"
-                      name="teacher-search-name"
-                      placeholder="Search by name…"
-                      value={query}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
-                      autoComplete="off"
-                    />
-                  </Field>
-                  <Field>
-                    <Label>Email</Label>
-                    <Input
-                      type="search"
-                      name="teacher-search-email"
-                      placeholder="Filter by email…"
-                      value={emailQuery}
-                      onChange={(e: ChangeEvent<HTMLInputElement>) => setEmailQuery(e.target.value)}
-                      autoComplete="off"
-                    />
-                  </Field>
-                </div>
-              </FieldGroup>
-            </Fieldset>
-          </section>
+        <div className="mx-auto w-full max-w-5xl space-y-6 pb-2 [--gutter:--spacing(6)]">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Button color="indigo" onClick={openCreateTeacher} disabled={isFetching}>
+              Add teacher
+            </Button>
+          </div>
 
           <section
             aria-labelledby="teacher-results-heading"
@@ -514,38 +482,61 @@ export default function TeachersPage() {
                 : "border-zinc-950/10 dark:border-white/10"
             )}
           >
+            <div className="border-b border-zinc-950/10 bg-zinc-50/50 px-6 py-5 dark:border-white/10 dark:bg-zinc-950/30 sm:px-8">
+              <h2 id="teacher-filters-heading" className="sr-only">
+                Filters
+              </h2>
+              <Fieldset className="border-0 p-0">
+                <Legend className="sr-only">Find teachers</Legend>
+                <FieldGroup className="!mt-0 !space-y-4">
+                  <div className="grid gap-4 sm:grid-cols-2 sm:items-end sm:gap-6">
+                    <Field>
+                      <Label>Name</Label>
+                      <Input
+                        type="search"
+                        name="teacher-search-name"
+                        placeholder="Search by name…"
+                        value={query}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setQuery(e.target.value)}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <Field>
+                      <Label>Email</Label>
+                      <Input
+                        type="search"
+                        name="teacher-search-email"
+                        placeholder="Filter by email…"
+                        value={emailQuery}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setEmailQuery(e.target.value)}
+                        autoComplete="off"
+                      />
+                    </Field>
+                  </div>
+                </FieldGroup>
+              </Fieldset>
+            </div>
+
             <div
-              className="flex min-h-[3.25rem] flex-col gap-3 border-b border-zinc-950/10 px-6 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-8 dark:border-white/10"
+              className="flex min-h-[3.25rem] flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-zinc-950/10 px-6 py-4 text-center sm:px-8 dark:border-white/10"
               role="status"
               aria-live="polite"
             >
-              <Subheading id="teacher-results-heading" level={2} className="shrink-0 text-zinc-950 dark:text-white">
-                Results
+              <Subheading id="teacher-results-heading" level={2} className="text-zinc-950 dark:text-white">
+                Teachers
               </Subheading>
-              <div className="min-h-[1.5rem] min-w-0 flex-1 text-center">
-                <Text className="text-sm">
-                  <span className="text-zinc-500 dark:text-zinc-400">Showing </span>
-                  <Strong>
-                    {rangeStart}–{rangeEnd}
-                  </Strong>
-                  <span className="text-zinc-500 dark:text-zinc-400"> of </span>
-                  <Strong>{totalCount}</Strong>
-                  <span className="text-zinc-500 dark:text-zinc-400"> matches</span>
-                  {searchPending ? (
-                    <span className="mt-1 block text-xs font-normal text-amber-600 dark:text-amber-400">
-                      Search updating…
-                    </span>
-                  ) : null}
-                </Text>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
-                <Button color="indigo" onClick={openCreateTeacher} disabled={isFetching}>
-                  Add teacher
-                </Button>
-                <Button outline onClick={() => void loadTeachers()} disabled={isFetching}>
-                  Refresh
-                </Button>
-              </div>
+              <Text className="text-sm">
+                <span className="text-zinc-500 dark:text-zinc-400">Showing </span>
+                <Strong>
+                  {rangeStart}–{rangeEnd}
+                </Strong>
+                <span className="text-zinc-500 dark:text-zinc-400"> of </span>
+                <Strong>{totalCount}</Strong>
+                <span className="text-zinc-500 dark:text-zinc-400"> matches</span>
+                {searchPending ? (
+                  <span className="ml-2 text-xs font-normal text-amber-600 dark:text-amber-400">Search updating…</span>
+                ) : null}
+              </Text>
             </div>
 
             {listBusy ? (
@@ -560,7 +551,7 @@ export default function TeachersPage() {
               <div className="h-1 w-full bg-transparent" aria-hidden="true" />
             )}
 
-            <div className="px-4 pb-0 pt-0 sm:px-6">
+            <div>
               {totalCount === 0 && !loading && !searchPending && !isFetching ? (
                 <div className="border-t border-dashed border-zinc-950/15 bg-zinc-50/50 px-6 py-14 text-center dark:border-white/10 dark:bg-zinc-950/30 sm:px-8">
                   <Text className="text-balance">No teachers match these filters.</Text>
@@ -601,7 +592,7 @@ export default function TeachersPage() {
                       <TableRow>
                         <TableHeader>Teacher</TableHeader>
                         <TableHeader className="hidden md:table-cell">Email</TableHeader>
-                        <TableHeader className="w-0 text-right">Actions</TableHeader>
+                        <TableHeader className="whitespace-nowrap text-center">Actions</TableHeader>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -623,9 +614,6 @@ export default function TeachersPage() {
                                     <span className="block font-medium text-zinc-950 dark:text-white">
                                       {teacher.name}
                                     </span>
-                                    <TextLink href={`/teachers/${teacher.id}`} className="mt-0.5 inline-block text-sm/6">
-                                      View profile
-                                    </TextLink>
                                     <div className="mt-1 md:hidden">
                                       {teacher.email ? (
                                         <Text className="truncate text-sm text-zinc-600 dark:text-zinc-400">
@@ -647,8 +635,11 @@ export default function TeachersPage() {
                                   <Text className="text-sm text-zinc-400 dark:text-zinc-500">—</Text>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right">
-                                <div className="relative z-10 flex min-h-[3.25rem] flex-wrap items-center justify-end gap-1">
+                              <TableCell className="text-center">
+                                <div className="relative z-10 flex min-h-[3.25rem] flex-row flex-wrap items-center justify-center gap-6">
+                                  <TextLink href={`/teachers/${teacher.id}`} className="shrink-0 text-sm/6">
+                                    View profile
+                                  </TextLink>
                                   <Button
                                     plain
                                     onClick={() => openEditTeacher(teacher)}
@@ -677,15 +668,15 @@ export default function TeachersPage() {
                                   <div className="size-10 shrink-0 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700" />
                                   <div className="min-w-0 flex-1 space-y-2">
                                     <div className="h-4 w-40 max-w-full animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-                                    <div className="h-3 w-24 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" />
                                   </div>
                                 </div>
                               </TableCell>
                               <TableCell className="hidden md:table-cell">
                                 <div className="h-6 w-40 max-w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
                               </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex min-h-[3.25rem] items-center justify-end gap-2">
+                              <TableCell className="text-center">
+                                <div className="flex min-h-[3.25rem] items-center justify-center gap-6">
+                                  <div className="h-4 w-20 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
                                   <div className="h-8 w-12 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
                                   <div className="h-8 w-14 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
                                 </div>
@@ -701,7 +692,7 @@ export default function TeachersPage() {
                             <TableCell className="hidden md:table-cell">
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
                           </TableRow>

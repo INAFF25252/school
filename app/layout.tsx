@@ -1,3 +1,4 @@
+import { AuthGuard } from "@/app/components/auth-guard";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -33,7 +34,9 @@ export default function RootLayout({
           href="https://cdn-uicons.flaticon.com/uicons-solid-rounded/css/uicons-solid-rounded.css"
         />
       </head>
-      <body className="flex min-h-dvh flex-col">{children}</body>
+      <body className="flex min-h-dvh flex-col">
+        <AuthGuard>{children}</AuthGuard>
+      </body>
     </html>
   );
 }

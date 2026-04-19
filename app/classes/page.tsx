@@ -434,37 +434,12 @@ export default function ClassesPage() {
   return (
     <>
       <SidebarLayout navbar={navbar} sidebar={sidebar}>
-        <div className="mx-auto w-full max-w-5xl space-y-8 pb-2 [--gutter:--spacing(6)]">
-          <section
-            aria-labelledby="class-filters-heading"
-            className="rounded-2xl border border-zinc-950/10 bg-zinc-50/90 p-6 shadow-xs sm:p-8 dark:border-white/10 dark:bg-zinc-950/40 dark:shadow-none"
-          >
-            <h2 id="class-filters-heading" className="sr-only">
-              Filters
-            </h2>
-            <Fieldset className="border-0 p-0">
-              <Legend className="sr-only">Find classes</Legend>
-              <FieldGroup className="!mt-0 !space-y-4">
-                <div className="grid gap-4 sm:max-w-md sm:items-end">
-                  <Field>
-                    <Label>Teacher</Label>
-                    <Select
-                      name="class-filter-teacher"
-                      value={teacherFilter}
-                      onChange={(e: ChangeEvent<HTMLSelectElement>) => setTeacherFilter(e.target.value)}
-                    >
-                      <option value="all">All teachers</option>
-                      {allTeachers.map((t) => (
-                        <option key={t.id} value={String(t.id)}>
-                          {t.name}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </div>
-              </FieldGroup>
-            </Fieldset>
-          </section>
+        <div className="mx-auto w-full max-w-5xl space-y-6 pb-2 [--gutter:--spacing(6)]">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <Button color="indigo" onClick={openCreateClass} disabled={isFetching || allTeachers.length === 0}>
+              Add class
+            </Button>
+          </div>
 
           <section
             aria-labelledby="class-results-heading"
@@ -476,33 +451,51 @@ export default function ClassesPage() {
                 : "border-zinc-950/10 dark:border-white/10"
             )}
           >
+            <div className="border-b border-zinc-950/10 bg-zinc-50/50 px-6 py-5 dark:border-white/10 dark:bg-zinc-950/30 sm:px-8">
+              <h2 id="class-filters-heading" className="sr-only">
+                Filters
+              </h2>
+              <Fieldset className="border-0 p-0">
+                <Legend className="sr-only">Find classes</Legend>
+                <FieldGroup className="!mt-0 !space-y-4">
+                  <div className="grid gap-4 sm:max-w-md sm:items-end">
+                    <Field>
+                      <Label>Teacher</Label>
+                      <Select
+                        name="class-filter-teacher"
+                        value={teacherFilter}
+                        onChange={(e: ChangeEvent<HTMLSelectElement>) => setTeacherFilter(e.target.value)}
+                      >
+                        <option value="all">All teachers</option>
+                        {allTeachers.map((t) => (
+                          <option key={t.id} value={String(t.id)}>
+                            {t.name}
+                          </option>
+                        ))}
+                      </Select>
+                    </Field>
+                  </div>
+                </FieldGroup>
+              </Fieldset>
+            </div>
+
             <div
-              className="flex min-h-[3.25rem] flex-col gap-3 border-b border-zinc-950/10 px-6 py-4 sm:flex-row sm:items-center sm:gap-4 sm:px-8 dark:border-white/10"
+              className="flex min-h-[3.25rem] flex-wrap items-center justify-center gap-x-3 gap-y-2 border-b border-zinc-950/10 px-6 py-4 text-center sm:px-8 dark:border-white/10"
               role="status"
               aria-live="polite"
             >
-              <Subheading id="class-results-heading" level={2} className="shrink-0 text-zinc-950 dark:text-white">
-                Results
+              <Subheading id="class-results-heading" level={2} className="text-zinc-950 dark:text-white">
+                Classes
               </Subheading>
-              <div className="min-h-[1.5rem] min-w-0 flex-1 text-center">
-                <Text className="text-sm">
-                  <span className="text-zinc-500 dark:text-zinc-400">Showing </span>
-                  <Strong>
-                    {rangeStart}–{rangeEnd}
-                  </Strong>
-                  <span className="text-zinc-500 dark:text-zinc-400"> of </span>
-                  <Strong>{totalCount}</Strong>
-                  <span className="text-zinc-500 dark:text-zinc-400"> matches</span>
-                </Text>
-              </div>
-              <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 self-end sm:self-auto">
-                <Button color="indigo" onClick={openCreateClass} disabled={isFetching || allTeachers.length === 0}>
-                  Add class
-                </Button>
-                <Button outline onClick={() => void loadClasses()} disabled={isFetching}>
-                  Refresh
-                </Button>
-              </div>
+              <Text className="text-sm">
+                <span className="text-zinc-500 dark:text-zinc-400">Showing </span>
+                <Strong>
+                  {rangeStart}–{rangeEnd}
+                </Strong>
+                <span className="text-zinc-500 dark:text-zinc-400"> of </span>
+                <Strong>{totalCount}</Strong>
+                <span className="text-zinc-500 dark:text-zinc-400"> matches</span>
+              </Text>
             </div>
 
             {listBusy ? (
@@ -517,7 +510,7 @@ export default function ClassesPage() {
               <div className="h-1 w-full bg-transparent" aria-hidden="true" />
             )}
 
-            <div className="px-4 pb-0 pt-0 sm:px-6">
+            <div>
               {totalCount === 0 && !loading && !isFetching ? (
                 <div className="border-t border-dashed border-zinc-950/15 bg-zinc-50/50 px-6 py-14 text-center dark:border-white/10 dark:bg-zinc-950/30 sm:px-8">
                   <Text className="text-balance">
@@ -564,8 +557,8 @@ export default function ClassesPage() {
                     <TableHead>
                       <TableRow>
                         <TableHeader>Class</TableHeader>
-                        <TableHeader className="hidden lg:table-cell">Teacher</TableHeader>
-                        <TableHeader className="w-0 text-right">Actions</TableHeader>
+                        <TableHeader className="hidden md:table-cell">Teacher</TableHeader>
+                        <TableHeader className="whitespace-nowrap text-center">Actions</TableHeader>
                       </TableRow>
                     </TableHead>
                     <TableBody>
@@ -586,51 +579,32 @@ export default function ClassesPage() {
                                   />
                                   <div className="min-w-0">
                                     <span className="block font-medium text-zinc-950 dark:text-white">Class</span>
-                                    {teacher ? (
-                                      <span className="mt-0.5 block text-sm text-zinc-600 dark:text-zinc-400">
-                                        {teacher.name}
-                                      </span>
-                                    ) : (
-                                      <span className="mt-0.5 block text-sm text-zinc-500 dark:text-zinc-400">
-                                        Teacher not loaded
-                                      </span>
-                                    )}
-                                    <TextLink href={`/classes/${klass.id}`} className="mt-0.5 inline-block text-sm/6">
-                                      View details
-                                    </TextLink>
-                                    <div className="mt-1 lg:hidden">
+                                    <div className="mt-1 md:hidden">
                                       {teacher ? (
-                                        <TextLink
-                                          href={`/teachers/${teacher.id}`}
-                                          className="text-sm/6 text-zinc-600 dark:text-zinc-400"
-                                        >
+                                        <Text className="truncate text-sm text-zinc-600 dark:text-zinc-400">
                                           {teacher.name}
-                                        </TextLink>
-                                      ) : (
-                                        <Text className="text-sm text-zinc-400 dark:text-zinc-500">
-                                          Teacher unavailable
                                         </Text>
+                                      ) : (
+                                        <Text className="text-sm text-zinc-400 dark:text-zinc-500">No teacher on file</Text>
                                       )}
                                     </div>
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="hidden lg:table-cell">
+                              <TableCell className="hidden md:table-cell">
                                 {teacher ? (
-                                  <div className="flex flex-wrap items-center gap-2">
-                                    <Badge color="zinc" className="font-normal">
-                                      {teacher.name}
-                                    </Badge>
-                                    <TextLink href={`/teachers/${teacher.id}`} className="text-sm/6">
-                                      Open
-                                    </TextLink>
-                                  </div>
+                                  <Badge color="zinc" className="max-w-[14rem] truncate font-normal">
+                                    {teacher.name}
+                                  </Badge>
                                 ) : (
-                                  <Text className="text-sm text-zinc-500 dark:text-zinc-400">Unavailable</Text>
+                                  <Text className="text-sm text-zinc-400 dark:text-zinc-500">—</Text>
                                 )}
                               </TableCell>
-                              <TableCell className="text-right">
-                                <div className="relative z-10 flex min-h-[3.25rem] flex-wrap items-center justify-end gap-1">
+                              <TableCell className="text-center">
+                                <div className="relative z-10 flex min-h-[3.25rem] flex-row flex-wrap items-center justify-center gap-6">
+                                  <TextLink href={`/classes/${klass.id}`} className="shrink-0 text-sm/6">
+                                    View class
+                                  </TextLink>
                                   <Button
                                     plain
                                     onClick={() => openEditClass(klass)}
@@ -659,15 +633,15 @@ export default function ClassesPage() {
                                   <div className="size-10 shrink-0 animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700" />
                                   <div className="min-w-0 flex-1 space-y-2">
                                     <div className="h-4 w-32 max-w-full animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
-                                    <div className="h-3 w-24 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" />
                                   </div>
                                 </div>
                               </TableCell>
-                              <TableCell className="hidden lg:table-cell">
+                              <TableCell className="hidden md:table-cell">
                                 <div className="h-6 w-36 max-w-full animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
                               </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex min-h-[3.25rem] items-center justify-end gap-2">
+                              <TableCell className="text-center">
+                                <div className="flex min-h-[3.25rem] items-center justify-center gap-6">
+                                  <div className="h-4 w-16 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
                                   <div className="h-8 w-12 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
                                   <div className="h-8 w-14 animate-pulse rounded-lg bg-zinc-100 dark:bg-zinc-800" />
                                 </div>
@@ -680,10 +654,10 @@ export default function ClassesPage() {
                             <TableCell>
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
-                            <TableCell className="hidden lg:table-cell">
+                            <TableCell className="hidden md:table-cell">
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
-                            <TableCell className="text-right">
+                            <TableCell className="text-center">
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
                           </TableRow>
