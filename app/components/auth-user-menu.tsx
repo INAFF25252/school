@@ -10,11 +10,18 @@ import {
   DropdownItem,
   DropdownMenu,
 } from "@/app/components/dropdown";
+import {
+  authUserAvatarPath,
+  AVATAR_ACCEPT,
+  explainAccountAvatarMetadataError,
+  uploadProfilePhoto,
+  validateAvatarFile,
+} from "@/lib/profile-avatar-storage";
 import { supabase } from "@/supabase";
 import clsx from "clsx";
 import type { User } from "@supabase/supabase-js";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function ChevronDownIcon({ className }: { className?: string }) {
   return (
@@ -54,6 +61,9 @@ export function AuthUserMenu({
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [ready, setReady] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,8 +87,37 @@ export function AuthUserMenu({
 
   async function signOut() {
     await supabase.auth.signOut();
-    router.replace("/signup");
+    router.replace("/signup?mode=signin");
     router.refresh();
+  }
+
+  async function uploadProfileAvatar(file: File) {
+    if (!user) return;
+    setAvatarError(null);
+    const validation = validateAvatarFile(file);
+    if (validation) {
+      setAvatarError(validation);
+      return;
+    }
+    setAvatarBusy(true);
+    const path = authUserAvatarPath(user.id);
+    const uploaded = await uploadProfilePhoto(supabase, path, file);
+    if ("error" in uploaded) {
+      setAvatarError(uploaded.error);
+      setAvatarBusy(false);
+      return;
+    }
+    const bustedUrl = uploaded.publicUrl;
+    const { data: authData, error: metaError } = await supabase.auth.updateUser({
+      data: { avatar_url: bustedUrl },
+    });
+    if (metaError) {
+      setAvatarError(explainAccountAvatarMetadataError(metaError.message));
+      setAvatarBusy(false);
+      return;
+    }
+    if (authData.user) setUser(authData.user);
+    setAvatarBusy(false);
   }
 
   if (!ready) {
@@ -100,7 +139,7 @@ export function AuthUserMenu({
     return (
       <div className={clsx(variant === "toolbar" && "flex justify-end", className)}>
         <Button
-          href="/signup"
+          href="/signup?mode=signin"
           plain
           className={clsx(
             cardChrome(
@@ -167,6 +206,33 @@ export function AuthUserMenu({
             <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Signed in as</p>
             <p className="mt-0.5 truncate text-sm font-semibold text-zinc-950 dark:text-white">{email}</p>
           </DropdownHeader>
+          <DropdownDivider />
+          <input
+            ref={avatarInputRef}
+            type="file"
+            accept={AVATAR_ACCEPT}
+            className="sr-only"
+            tabIndex={-1}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              e.target.value = "";
+              if (file) void uploadProfileAvatar(file);
+            }}
+          />
+          <DropdownItem
+            disabled={avatarBusy}
+            onClick={() => {
+              setAvatarError(null);
+              avatarInputRef.current?.click();
+            }}
+          >
+            {avatarBusy ? "Uploading photo…" : "Change profile photo"}
+          </DropdownItem>
+          {avatarError ? (
+            <p className="px-3.5 pb-2 text-sm text-red-600 sm:px-3 dark:text-red-400" role="alert">
+              {avatarError}
+            </p>
+          ) : null}
           <DropdownDivider />
           <DropdownItem
             onClick={() => {

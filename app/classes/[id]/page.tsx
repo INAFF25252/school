@@ -159,6 +159,7 @@ export default function ClassDetailPage() {
               <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:gap-8">
                 <Avatar
                   square
+                  src={teacher?.avatar_url}
                   className="size-16 shrink-0 bg-indigo-100 text-lg text-indigo-900 dark:bg-indigo-950/80 dark:text-indigo-100 sm:size-20 sm:text-xl"
                   initials={teacher ? initialsFromName(teacher.name) : "CL"}
                   alt=""
@@ -240,6 +241,7 @@ export default function ClassDetailPage() {
                               <div className="flex min-h-[3rem] items-center gap-3">
                                 <Avatar
                                   square
+                                  src={student.avatar_url}
                                   className="size-10 shrink-0 bg-zinc-100 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
                                   initials={initialsFromName(student.name)}
                                   alt=""

@@ -72,16 +72,19 @@ export type Database = {
       }
       students: {
         Row: {
+          avatar_url: string | null
           grade: number
           id: number
           name: string
         }
         Insert: {
+          avatar_url?: string | null
           grade: number
           id?: number
           name: string
         }
         Update: {
+          avatar_url?: string | null
           grade?: number
           id?: number
           name?: string
@@ -90,16 +93,19 @@ export type Database = {
       }
       teachers: {
         Row: {
+          avatar_url: string | null
           email: string | null
           id: number
           name: string
         }
         Insert: {
+          avatar_url?: string | null
           email?: string | null
           id?: number
           name: string
         }
         Update: {
+          avatar_url?: string | null
           email?: string | null
           id?: number
           name?: string

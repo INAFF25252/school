@@ -19,6 +19,7 @@ import {
   DialogTitle,
 } from "@/app/components/dialog";
 import { ErrorMessage, Field, FieldGroup, Fieldset, Label, Legend } from "@/app/components/fieldset";
+import { Input } from "@/app/components/input";
 import { Subheading } from "@/app/components/heading";
 import { ClassesIcon, HomeIcon, StudentsIcon, TeachersIcon } from "@/app/components/main-nav-icons";
 import {
@@ -51,11 +52,12 @@ import {
 import { Strong, Text, TextLink } from "@/app/components/text";
 import { usePathname } from "next/navigation";
 import clsx from "clsx";
-import type { ChangeEvent, FormEvent } from "react";
+import type { ChangeEvent, ComponentProps, FormEvent } from "react";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 type ClassRow = Database["public"]["Tables"]["classes"]["Row"];
 type Teacher = Database["public"]["Tables"]["teachers"]["Row"];
+type Student = Database["public"]["Tables"]["students"]["Row"];
 
 type ClassDeleteImpact = { kind: "ready"; enrollmentCount: number } | { kind: "error"; message: string };
 
@@ -65,6 +67,17 @@ type ClassFormOpen = null | { mode: "create" } | { mode: "edit"; klass: ClassRow
 
 type FormValues = { teacherId: string };
 type FieldErrors = { teacherId?: string };
+
+/** Strip LIKE wildcards so user input cannot broaden the pattern. */
+function sanitizeIlikeTerm(raw: string) {
+  return raw.trim().replace(/[%_]/g, "");
+}
+
+function gradeBadgeColor(grade: number): NonNullable<ComponentProps<typeof Badge>["color"]> {
+  if (grade <= 5) return "lime";
+  if (grade <= 8) return "sky";
+  return "indigo";
+}
 
 function validateClassForm(values: FormValues, teacherOptions: Teacher[]): FieldErrors {
   const errors: FieldErrors = {};
@@ -144,6 +157,15 @@ export default function ClassesPage() {
   const [formApiError, setFormApiError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [debouncedStudentSearch, setDebouncedStudentSearch] = useState("");
+  const [studentSearchResults, setStudentSearchResults] = useState<Student[]>([]);
+  const [studentSearchLoading, setStudentSearchLoading] = useState(false);
+  const [enrollmentDraft, setEnrollmentDraft] = useState<Student[]>([]);
+  const [enrollmentBaselineIds, setEnrollmentBaselineIds] = useState<Set<number>>(() => new Set());
+  const [enrollmentLoadError, setEnrollmentLoadError] = useState<string | null>(null);
+  const [enrollmentLoading, setEnrollmentLoading] = useState(false);
+
   const [deleteTarget, setDeleteTarget] = useState<ClassRow | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
@@ -161,6 +183,104 @@ export default function ClassesPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    const t = window.setTimeout(() => setDebouncedStudentSearch(studentSearchQuery.trim()), 300);
+    return () => window.clearTimeout(t);
+  }, [studentSearchQuery]);
+
+  useEffect(() => {
+    if (!classForm) {
+      setEnrollmentDraft([]);
+      setEnrollmentBaselineIds(new Set());
+      setEnrollmentLoading(false);
+      setEnrollmentLoadError(null);
+      setStudentSearchQuery("");
+      setDebouncedStudentSearch("");
+      setStudentSearchResults([]);
+      setStudentSearchLoading(false);
+      return;
+    }
+    if (classForm.mode === "create") {
+      setEnrollmentLoading(false);
+      setEnrollmentLoadError(null);
+      return;
+    }
+    let cancelled = false;
+    const classId = classForm.klass.id;
+    setEnrollmentLoading(true);
+    setEnrollmentLoadError(null);
+    void (async () => {
+      const { data: enrollRows, error: enrollErr } = await supabase
+        .from("enrollments")
+        .select("student")
+        .eq("class", classId);
+      if (cancelled) return;
+      if (enrollErr) {
+        setEnrollmentDraft([]);
+        setEnrollmentBaselineIds(new Set());
+        setEnrollmentLoadError(enrollErr.message);
+        setEnrollmentLoading(false);
+        return;
+      }
+      const studentIds = [...new Set((enrollRows ?? []).map((e) => e.student))];
+      if (studentIds.length === 0) {
+        setEnrollmentDraft([]);
+        setEnrollmentBaselineIds(new Set());
+        setEnrollmentLoading(false);
+        return;
+      }
+      const { data: studs, error: sErr } = await supabase
+        .from("students")
+        .select("*")
+        .in("id", studentIds)
+        .order("name");
+      if (cancelled) return;
+      if (sErr) {
+        setEnrollmentDraft([]);
+        setEnrollmentBaselineIds(new Set());
+        setEnrollmentLoadError(sErr.message);
+      } else {
+        const list = (studs ?? []) as Student[];
+        setEnrollmentDraft(list);
+        setEnrollmentBaselineIds(new Set(list.map((s) => s.id)));
+      }
+      setEnrollmentLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [classForm]);
+
+  useEffect(() => {
+    if (!classForm) return;
+    let cancelled = false;
+    const term = sanitizeIlikeTerm(debouncedStudentSearch);
+    if (term.length === 0) {
+      setStudentSearchResults([]);
+      setStudentSearchLoading(false);
+      return;
+    }
+    setStudentSearchLoading(true);
+    void (async () => {
+      const { data, error: sErr } = await supabase
+        .from("students")
+        .select("*")
+        .ilike("name", `%${term}%`)
+        .order("name")
+        .limit(20);
+      if (cancelled) return;
+      if (sErr) {
+        setStudentSearchResults([]);
+      } else {
+        setStudentSearchResults((data ?? []) as Student[]);
+      }
+      setStudentSearchLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedStudentSearch, classForm]);
 
   const loadClasses = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -211,7 +331,7 @@ export default function ClassesPage() {
 
       const classRows = (data ?? []) as ClassRow[];
       const teacherIds = [...new Set(classRows.map((c) => c.teacher))];
-      let lookup: Record<number, Teacher> = {};
+      const lookup: Record<number, Teacher> = {};
       if (teacherIds.length > 0) {
         const { data: trows, error: tErr } = await supabase.from("teachers").select("*").in("id", teacherIds);
         if (tErr) {
@@ -249,11 +369,21 @@ export default function ClassesPage() {
     void loadClasses();
   }, [loadClasses]);
 
+  const selectedTeacherForForm = useMemo(() => {
+    const id = Number(formValues.teacherId);
+    if (!Number.isInteger(id) || id <= 0) return undefined;
+    return allTeachers.find((t) => t.id === id);
+  }, [allTeachers, formValues.teacherId]);
+
   const openCreateClass = useCallback(() => {
     const first = allTeachers[0];
     setFormValues({ teacherId: first ? String(first.id) : "" });
     setFormErrors({});
     setFormApiError(null);
+    setStudentSearchQuery("");
+    setDebouncedStudentSearch("");
+    setEnrollmentDraft([]);
+    setEnrollmentBaselineIds(new Set());
     setClassForm({ mode: "create" });
   }, [allTeachers]);
 
@@ -261,7 +391,20 @@ export default function ClassesPage() {
     setFormValues({ teacherId: String(klass.teacher) });
     setFormErrors({});
     setFormApiError(null);
+    setStudentSearchQuery("");
+    setDebouncedStudentSearch("");
     setClassForm({ mode: "edit", klass });
+  }, []);
+
+  const addStudentToEnrollmentDraft = useCallback((student: Student) => {
+    setEnrollmentDraft((prev) => {
+      if (prev.some((p) => p.id === student.id)) return prev;
+      return [...prev, student].sort((a, b) => a.name.localeCompare(b.name));
+    });
+  }, []);
+
+  const removeStudentFromEnrollmentDraft = useCallback((studentId: number) => {
+    setEnrollmentDraft((prev) => prev.filter((s) => s.id !== studentId));
   }, []);
 
   const closeClassForm = useCallback(() => {
@@ -283,19 +426,56 @@ export default function ClassesPage() {
       setSaving(true);
       try {
         if (classForm.mode === "create") {
-          const { error: insertError } = await supabase.from("classes").insert({ teacher: teacherId }).select("id").single();
+          const { data: inserted, error: insertError } = await supabase
+            .from("classes")
+            .insert({ teacher: teacherId })
+            .select("id")
+            .single();
           if (insertError) {
             setFormApiError(insertError.message);
             return;
           }
+          const newClassId = (inserted as { id: number } | null)?.id;
+          if (newClassId != null && enrollmentDraft.length > 0) {
+            const rows = enrollmentDraft.map((s) => ({ class: newClassId, student: s.id }));
+            const { error: enrollErr } = await supabase.from("enrollments").insert(rows);
+            if (enrollErr) {
+              setFormApiError(enrollErr.message);
+              return;
+            }
+          }
         } else {
+          const classId = classForm.klass.id;
           const { error: updateError } = await supabase
             .from("classes")
             .update({ teacher: teacherId })
-            .eq("id", classForm.klass.id);
+            .eq("id", classId);
           if (updateError) {
             setFormApiError(updateError.message);
             return;
+          }
+          const currentIds = new Set(enrollmentDraft.map((s) => s.id));
+          const toRemove = [...enrollmentBaselineIds].filter((id) => !currentIds.has(id));
+          const toAdd = enrollmentDraft.map((s) => s.id).filter((id) => !enrollmentBaselineIds.has(id));
+          if (toRemove.length > 0) {
+            const { error: delErr } = await supabase
+              .from("enrollments")
+              .delete()
+              .eq("class", classId)
+              .in("student", toRemove);
+            if (delErr) {
+              setFormApiError(delErr.message);
+              return;
+            }
+          }
+          if (toAdd.length > 0) {
+            const { error: addErr } = await supabase
+              .from("enrollments")
+              .insert(toAdd.map((student) => ({ class: classId, student })));
+            if (addErr) {
+              setFormApiError(addErr.message);
+              return;
+            }
           }
         }
         setClassForm(null);
@@ -304,7 +484,7 @@ export default function ClassesPage() {
         setSaving(false);
       }
     },
-    [classForm, formValues, allTeachers, loadClasses]
+    [classForm, formValues, allTeachers, loadClasses, enrollmentDraft, enrollmentBaselineIds]
   );
 
   const openDeleteClass = useCallback((klass: ClassRow) => {
@@ -573,6 +753,7 @@ export default function ClassesPage() {
                                 <div className="flex min-h-[3.25rem] items-center gap-3">
                                   <Avatar
                                     square
+                                    src={teacher?.avatar_url}
                                     className="size-10 shrink-0 bg-indigo-100 text-sm text-indigo-800 dark:bg-indigo-950/80 dark:text-indigo-200"
                                     initials={teacher ? initialsFromName(teacher.name) : "CL"}
                                     alt=""
@@ -783,13 +964,13 @@ export default function ClassesPage() {
         </div>
       </SidebarLayout>
 
-      <Dialog open={classForm !== null} onClose={closeClassForm} size="md">
+      <Dialog open={classForm !== null} onClose={closeClassForm} size="lg">
         <div className="flex flex-col gap-1">
           <DialogTitle>{classForm?.mode === "edit" ? "Edit class" : "Add class"}</DialogTitle>
           <DialogDescription>
             {classForm?.mode === "edit"
-              ? "Assign a different teacher to this class."
-              : "Pick who leads this class. You need at least one teacher in the directory."}
+              ? "Change the teacher and manage which students are enrolled. Search the directory to add or remove sign-ups."
+              : "Pick who leads this class, then optionally search for students to enroll. You need at least one teacher in the directory."}
           </DialogDescription>
         </div>
         <form onSubmit={handleClassFormSubmit}>
@@ -831,7 +1012,151 @@ export default function ClassesPage() {
                     ))}
                   </Select>
                   {formErrors.teacherId ? <ErrorMessage>{formErrors.teacherId}</ErrorMessage> : null}
+                  {selectedTeacherForForm ? (
+                    <div className="mt-3 flex items-center gap-3 rounded-lg border border-zinc-950/10 bg-zinc-50/80 px-3 py-2.5 dark:border-white/10 dark:bg-zinc-900/50">
+                      <Avatar
+                        square
+                        src={selectedTeacherForForm.avatar_url}
+                        className="size-10 shrink-0 bg-zinc-100 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                        initials={initialsFromName(selectedTeacherForForm.name)}
+                        alt=""
+                      />
+                      <Text className="min-w-0 text-sm text-zinc-600 dark:text-zinc-400">
+                        Class listings use this teacher&apos;s profile photo.
+                      </Text>
+                    </div>
+                  ) : null}
                 </Field>
+
+                <div className="border-t border-zinc-950/10 pt-5 dark:border-white/10">
+                  <Subheading level={3} className="mb-3 text-zinc-950 dark:text-white">
+                    Students enrolled
+                  </Subheading>
+                  <Text className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
+                    Search by name, then add students to the list below. Each student appears at most once.
+                  </Text>
+                  {classForm?.mode === "edit" && enrollmentLoading ? (
+                    <Text className="mb-4 text-sm">Loading current sign-ups…</Text>
+                  ) : null}
+                  {enrollmentLoadError ? (
+                    <div
+                      role="alert"
+                      className="mb-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm/6 text-amber-950 dark:border-amber-400/35 dark:bg-amber-400/10 dark:text-amber-100"
+                    >
+                      Could not load enrollments: {enrollmentLoadError}
+                    </div>
+                  ) : null}
+                  <Field>
+                    <Label htmlFor="class-form-student-search">Find students</Label>
+                    <Input
+                      id="class-form-student-search"
+                      type="search"
+                      name="classFormStudentSearch"
+                      value={studentSearchQuery}
+                      onChange={(e: ChangeEvent<HTMLInputElement>) => setStudentSearchQuery(e.target.value)}
+                      placeholder="Search by student name…"
+                      disabled={saving || enrollmentLoading}
+                      autoComplete="off"
+                    />
+                  </Field>
+                  {sanitizeIlikeTerm(debouncedStudentSearch).length > 0 ? (
+                    <div
+                      className="mt-3 max-h-48 overflow-y-auto rounded-lg border border-zinc-950/10 dark:border-white/10"
+                      role="listbox"
+                      aria-label="Search results"
+                    >
+                      {studentSearchLoading ? (
+                        <div className="px-3 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                          Searching…
+                        </div>
+                      ) : studentSearchResults.length === 0 ? (
+                        <div className="px-3 py-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
+                          No students match that search.
+                        </div>
+                      ) : (
+                        <ul className="divide-y divide-zinc-950/10 dark:divide-white/10">
+                          {studentSearchResults.map((s) => {
+                            const alreadyInPreview = enrollmentDraft.some((p) => p.id === s.id);
+                            return (
+                              <li key={s.id} className="flex flex-wrap items-center justify-between gap-3 px-3 py-2.5">
+                                <div className="flex min-w-0 items-center gap-3">
+                                  <Avatar
+                                    square
+                                    src={s.avatar_url}
+                                    className="size-9 shrink-0 bg-zinc-100 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                                    initials={initialsFromName(s.name)}
+                                    alt=""
+                                  />
+                                  <div className="min-w-0">
+                                    <span className="block truncate font-medium text-zinc-950 dark:text-white">
+                                      {s.name}
+                                    </span>
+                                    <Badge color={gradeBadgeColor(s.grade)} className="mt-1 font-normal">
+                                      Grade {s.grade}
+                                    </Badge>
+                                  </div>
+                                </div>
+                                <Button
+                                  type="button"
+                                  outline
+                                  disabled={saving || enrollmentLoading || alreadyInPreview}
+                                  onClick={() => addStudentToEnrollmentDraft(s)}
+                                >
+                                  {alreadyInPreview ? "Added" : "Add"}
+                                </Button>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+                    </div>
+                  ) : null}
+
+                  <div className="mt-5">
+                    <Label className="!mb-2">Preview ({enrollmentDraft.length})</Label>
+                    {enrollmentDraft.length === 0 ? (
+                      <div className="rounded-lg border border-dashed border-zinc-950/15 bg-zinc-50/80 px-4 py-8 text-center text-sm text-zinc-600 dark:border-white/10 dark:bg-zinc-950/40 dark:text-zinc-400">
+                        No students in this list yet. Search above to add some.
+                      </div>
+                    ) : (
+                      <ul className="max-h-52 space-y-2 overflow-y-auto rounded-lg border border-zinc-950/10 p-2 dark:border-white/10">
+                        {enrollmentDraft.map((s) => (
+                          <li
+                            key={s.id}
+                            className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-zinc-50 px-3 py-2 dark:bg-zinc-900/80"
+                          >
+                            <div className="flex min-w-0 items-center gap-3">
+                              <Avatar
+                                square
+                                src={s.avatar_url}
+                                className="size-9 shrink-0 bg-zinc-100 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
+                                initials={initialsFromName(s.name)}
+                                alt=""
+                              />
+                              <div className="min-w-0">
+                                <span className="block truncate font-medium text-zinc-950 dark:text-white">
+                                  {s.name}
+                                </span>
+                                <Badge color={gradeBadgeColor(s.grade)} className="mt-1 font-normal">
+                                  Grade {s.grade}
+                                </Badge>
+                              </div>
+                            </div>
+                            <Button
+                              type="button"
+                              plain
+                              disabled={saving || enrollmentLoading}
+                              onClick={() => removeStudentFromEnrollmentDraft(s.id)}
+                              className="shrink-0 text-red-600 data-hover:bg-red-500/10 dark:text-red-400"
+                            >
+                              Remove
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
               </FieldGroup>
             </Fieldset>
           </DialogBody>
@@ -839,7 +1164,15 @@ export default function ClassesPage() {
             <Button type="button" plain onClick={closeClassForm} disabled={saving}>
               Cancel
             </Button>
-            <Button type="submit" color="dark/zinc" disabled={saving || allTeachers.length === 0}>
+            <Button
+              type="submit"
+              color="dark/zinc"
+              disabled={
+                saving ||
+                allTeachers.length === 0 ||
+                (classForm?.mode === "edit" && enrollmentLoading)
+              }
+            >
               {saving ? "Saving…" : classForm?.mode === "edit" ? "Save changes" : "Create class"}
             </Button>
           </DialogActions>

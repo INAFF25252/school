@@ -124,6 +124,7 @@ export default function TeacherDetailPage() {
               <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:gap-8">
                 <Avatar
                   square
+                  src={teacher.avatar_url}
                   className="size-16 shrink-0 bg-zinc-100 text-lg text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 sm:size-20 sm:text-xl"
                   initials={initialsFromName(teacher.name)}
                   alt=""

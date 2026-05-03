@@ -1,5 +1,6 @@
 "use client";
 
+import { explainAvatarUrlSaveError, studentAvatarPath, uploadProfilePhoto } from "@/lib/profile-avatar-storage";
 import { supabase } from "@/supabase";
 import type { Database } from "@/database.types";
 import {
@@ -19,6 +20,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/app/components/dialog";
+import { EntityAvatarField } from "@/app/components/entity-avatar-field";
 import { ErrorMessage, Field, FieldGroup, Fieldset, Label, Legend } from "@/app/components/fieldset";
 import { Subheading } from "@/app/components/heading";
 import { Input } from "@/app/components/input";
@@ -177,6 +179,7 @@ export default function StudentsPage() {
   const [formErrors, setFormErrors] = useState<FieldErrors>({});
   const [formApiError, setFormApiError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [avatarPendingFile, setAvatarPendingFile] = useState<File | null>(null);
 
   const [deleteTarget, setDeleteTarget] = useState<Student | null>(null);
   const [deleting, setDeleting] = useState(false);
@@ -257,6 +260,10 @@ export default function StudentsPage() {
     void loadStudents();
   }, [loadStudents]);
 
+  useEffect(() => {
+    if (!studentForm) setAvatarPendingFile(null);
+  }, [studentForm]);
+
   const openCreateStudent = useCallback(() => {
     setFormValues({ name: "", grade: "6" });
     setFormErrors({});
@@ -291,10 +298,29 @@ export default function StudentsPage() {
       setSaving(true);
       try {
         if (studentForm.mode === "create") {
-          const { error: insertError } = await supabase.from("students").insert({ name, grade }).select("id").single();
-          if (insertError) {
-            setFormApiError(insertError.message);
+          const { data: created, error: insertError } = await supabase
+            .from("students")
+            .insert({ name, grade })
+            .select("id")
+            .single();
+          if (insertError || !created) {
+            setFormApiError(insertError?.message ?? "Could not create student.");
             return;
+          }
+          if (avatarPendingFile) {
+            const uploaded = await uploadProfilePhoto(supabase, studentAvatarPath(created.id), avatarPendingFile);
+            if ("error" in uploaded) {
+              setFormApiError(uploaded.error);
+              return;
+            }
+            const { error: avatarErr } = await supabase
+              .from("students")
+              .update({ avatar_url: uploaded.publicUrl })
+              .eq("id", created.id);
+            if (avatarErr) {
+              setFormApiError(explainAvatarUrlSaveError(avatarErr.message));
+              return;
+            }
           }
         } else {
           const { error: updateError } = await supabase
@@ -305,6 +331,25 @@ export default function StudentsPage() {
             setFormApiError(updateError.message);
             return;
           }
+          if (avatarPendingFile) {
+            const uploaded = await uploadProfilePhoto(
+              supabase,
+              studentAvatarPath(studentForm.student.id),
+              avatarPendingFile
+            );
+            if ("error" in uploaded) {
+              setFormApiError(uploaded.error);
+              return;
+            }
+            const { error: avatarErr } = await supabase
+              .from("students")
+              .update({ avatar_url: uploaded.publicUrl })
+              .eq("id", studentForm.student.id);
+            if (avatarErr) {
+              setFormApiError(explainAvatarUrlSaveError(avatarErr.message));
+              return;
+            }
+          }
         }
         setStudentForm(null);
         await loadStudents({ silent: true });
@@ -312,7 +357,7 @@ export default function StudentsPage() {
         setSaving(false);
       }
     },
-    [studentForm, formValues, loadStudents]
+    [studentForm, formValues, loadStudents, avatarPendingFile]
   );
 
   const openDeleteStudent = useCallback((student: Student) => {
@@ -608,6 +653,7 @@ export default function StudentsPage() {
                                 <div className="flex min-h-[3.25rem] items-center gap-3">
                                   <Avatar
                                     square
+                                    src={student.avatar_url}
                                     className="size-10 shrink-0 bg-zinc-100 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300"
                                     initials={initialsFromName(student.name)}
                                     alt=""
@@ -863,6 +909,13 @@ export default function StudentsPage() {
                   </Select>
                   {formErrors.grade ? <ErrorMessage>{formErrors.grade}</ErrorMessage> : null}
                 </Field>
+                <EntityAvatarField
+                  disabled={saving}
+                  initials={initialsFromName(formValues.name)}
+                  existingUrl={studentForm?.mode === "edit" ? studentForm.student.avatar_url : null}
+                  pendingFile={avatarPendingFile}
+                  onPendingFileChange={setAvatarPendingFile}
+                />
               </FieldGroup>
             </Fieldset>
           </DialogBody>
