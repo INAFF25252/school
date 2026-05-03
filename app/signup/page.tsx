@@ -9,16 +9,18 @@ import { Text } from "@/app/components/text";
 import { notifyAuthEmails } from "@/lib/auth-email/client";
 import { supabase } from "@/supabase";
 import clsx from "clsx";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
 
 type Mode = "signup" | "signin";
 
 type OAuthProviderId = "google" | "discord" | "github";
 
-export default function SignupPage() {
+function SignupPageContent() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("signup");
+  const searchParams = useSearchParams();
+  const modeFromUrl = searchParams.get("mode") === "signin" ? "signin" : "signup";
+  const [mode, setMode] = useState<Mode>(modeFromUrl);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -328,5 +330,25 @@ export default function SignupPage() {
         </form>
       </div>
     </AuthLayout>
+  );
+}
+
+function SignupPageFallback() {
+  return (
+    <AuthLayout>
+      <div className="w-full max-w-sm space-y-8">
+        <div className="h-8 w-48 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-10 w-full animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+        <div className="h-32 w-full animate-pulse rounded-lg bg-zinc-200 dark:bg-zinc-700" />
+      </div>
+    </AuthLayout>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={<SignupPageFallback />}>
+      <SignupPageContent />
+    </Suspense>
   );
 }
