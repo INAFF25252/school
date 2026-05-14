@@ -60,6 +60,15 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 
 type Student = Database["public"]["Tables"]["students"]["Row"];
 type EnrollmentRow = Database["public"]["Tables"]["enrollments"]["Row"];
+type Teacher = Database["public"]["Tables"]["teachers"]["Row"];
+
+type EnrolledClassSummary = { classId: number; teacherName: string | null; teacherEmail: string | null };
+type StudentListRow = Student & { classes: EnrolledClassSummary[] };
+type StudentQueryRow = Student & {
+  enrollments: {
+    classes: { id: number; teachers: Pick<Teacher, "email" | "name"> | null } | null;
+  }[];
+};
 
 type DeleteImpact =
   | {
@@ -112,6 +121,67 @@ function gradeBadgeColor(grade: number): NonNullable<ComponentProps<typeof Badge
   return "indigo";
 }
 
+function classCountLabel(classes: EnrolledClassSummary[]) {
+  if (classes.length === 0) return "No classes";
+  if (classes.length === 1) return "1 class";
+  return `${classes.length} classes`;
+}
+
+function classTeacherLabel(classes: EnrolledClassSummary[]) {
+  if (classes.length === 0) return "Not enrolled";
+  const teacherLabels = [
+    ...new Set(
+      classes
+        .map((klass) => {
+          if (klass.teacherName && klass.teacherEmail) return `${klass.teacherName} (${klass.teacherEmail})`;
+          return klass.teacherName ?? klass.teacherEmail;
+        })
+        .filter((label): label is string => Boolean(label))
+    ),
+  ];
+  if (teacherLabels.length === 0) return "Teacher not listed";
+  const visible = teacherLabels.slice(0, 2).join(", ");
+  const extra = teacherLabels.length - 2;
+  return extra > 0 ? `${visible} +${extra} more` : visible;
+}
+
+function classInlineLabel(classes: EnrolledClassSummary[]) {
+  if (classes.length === 0) return classCountLabel(classes);
+  return `${classCountLabel(classes)} · ${classTeacherLabel(classes)}`;
+}
+
+function mapStudentQueryRow(row: StudentQueryRow): StudentListRow {
+  const classes = row.enrollments.flatMap((enrollment) => {
+    const klass = enrollment.classes;
+    if (!klass) return [];
+    return [
+      {
+        classId: klass.id,
+        teacherName: klass.teachers?.name ?? null,
+        teacherEmail: klass.teachers?.email ?? null,
+      },
+    ];
+  });
+
+  classes.sort((a, b) => {
+    const an = a.teacherName ?? "";
+    const bn = b.teacherName ?? "";
+    if (an !== bn) return an.localeCompare(bn);
+    const ae = a.teacherEmail ?? "";
+    const be = b.teacherEmail ?? "";
+    if (ae !== be) return ae.localeCompare(be);
+    return a.classId - b.classId;
+  });
+
+  return {
+    id: row.id,
+    name: row.name,
+    grade: row.grade,
+    avatar_url: row.avatar_url,
+    classes,
+  };
+}
+
 /** Page numbers with ellipsis gaps for compact pagination. */
 function buildPageList(current: number, totalPages: number): (number | "…")[] {
   if (totalPages <= 1) return [1];
@@ -161,7 +231,7 @@ const GRADE_FILTER_OPTIONS = Array.from({ length: GRADE_MAX - GRADE_MIN + 1 }, (
 
 export default function StudentsPage() {
   const pathname = usePathname();
-  const [students, setStudents] = useState<Student[]>([]);
+  const [students, setStudents] = useState<StudentListRow[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
@@ -204,7 +274,24 @@ export default function StudentsPage() {
       const from = (page - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
 
-      let qb = supabase.from("students").select("*", { count: "exact" }).order("name");
+      let qb = supabase
+        .from("students")
+        .select(
+          `
+            *,
+            enrollments (
+              classes (
+                id,
+                teachers (
+                  name,
+                  email
+                )
+              )
+            )
+          `,
+          { count: "exact" }
+        )
+        .order("name");
       const term = sanitizeIlikeTerm(debouncedQuery);
       if (term.length > 0) {
         qb = qb.ilike("name", `%${term}%`);
@@ -244,7 +331,7 @@ export default function StudentsPage() {
         return;
       }
 
-      setStudents((data ?? []) as Student[]);
+      setStudents(((data ?? []) as StudentQueryRow[]).map(mapStudentQueryRow));
       firstListLoadDone.current = true;
       setIsFetching(false);
       if (showFullPageSpinner) setLoading(false);
@@ -639,6 +726,7 @@ export default function StudentsPage() {
                       <TableRow>
                         <TableHeader>Student</TableHeader>
                         <TableHeader className="hidden text-right md:table-cell">Grade</TableHeader>
+                        <TableHeader className="hidden lg:table-cell">Classes</TableHeader>
                         <TableHeader className="whitespace-nowrap text-center">Actions</TableHeader>
                       </TableRow>
                     </TableHead>
@@ -665,11 +753,24 @@ export default function StudentsPage() {
                                     <div className="mt-1 md:hidden">
                                       <Badge color={gradeBadgeColor(student.grade)}>Grade {student.grade}</Badge>
                                     </div>
+                                    <Text className="mt-1 max-w-64 truncate text-xs text-zinc-500 lg:hidden dark:text-zinc-400">
+                                      {classInlineLabel(student.classes)}
+                                    </Text>
                                   </div>
                                 </div>
                               </TableCell>
                               <TableCell className="hidden text-right md:table-cell">
                                 <Badge color={gradeBadgeColor(student.grade)}>Grade {student.grade}</Badge>
+                              </TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                <div className="min-w-0">
+                                  <span className="block font-medium text-zinc-950 dark:text-white">
+                                    {classCountLabel(student.classes)}
+                                  </span>
+                                  <Text className="mt-1 max-w-56 truncate text-sm text-zinc-500 dark:text-zinc-400">
+                                    {classTeacherLabel(student.classes)}
+                                  </Text>
+                                </div>
                               </TableCell>
                               <TableCell className="text-center">
                                 <div className="relative z-10 flex min-h-[3.25rem] flex-row flex-wrap items-center justify-center gap-6">
@@ -710,6 +811,12 @@ export default function StudentsPage() {
                               <TableCell className="hidden text-right md:table-cell">
                                 <div className="ml-auto h-6 w-16 animate-pulse rounded-md bg-zinc-200 dark:bg-zinc-700" />
                               </TableCell>
+                              <TableCell className="hidden lg:table-cell">
+                                <div className="space-y-2">
+                                  <div className="h-4 w-20 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
+                                  <div className="h-4 w-36 animate-pulse rounded bg-zinc-100 dark:bg-zinc-800" />
+                                </div>
+                              </TableCell>
                               <TableCell className="text-center">
                                 <div className="flex min-h-[3.25rem] items-center justify-center gap-6">
                                   <div className="h-4 w-20 animate-pulse rounded bg-zinc-200 dark:bg-zinc-700" />
@@ -726,6 +833,9 @@ export default function StudentsPage() {
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
                             <TableCell className="hidden text-right md:table-cell">
+                              <div className="min-h-[3.25rem]" />
+                            </TableCell>
+                            <TableCell className="hidden lg:table-cell">
                               <div className="min-h-[3.25rem]" />
                             </TableCell>
                             <TableCell className="text-center">
